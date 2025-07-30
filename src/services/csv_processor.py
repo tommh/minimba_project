@@ -129,8 +129,10 @@ class CSVProcessor:
         for field in numeric_fields:
             if field in cleaned_df.columns:
                 cleaned_df[field] = cleaned_df[field].replace('', pd.NA)
+                # Convert to numeric, allowing NaN values
                 cleaned_df[field] = pd.to_numeric(cleaned_df[field], errors='coerce')
-                cleaned_df[field] = cleaned_df[field].astype('Int64')
+                # Fill NaN values with None for database compatibility
+                cleaned_df[field] = cleaned_df[field].where(pd.notna(cleaned_df[field]), None)
         
         # Clean datetime fields
         datetime_fields = ['Utstedelsesdato', 'EnergiVurderingDato']
@@ -381,6 +383,14 @@ class CSVProcessor:
             
             # Step 4: Clean and validate data
             cleaned_df = self.clean_and_validate_data(df, mapping)
+            
+            # Step 4.5: Remove internal duplicates based on Attestnummer
+            if 'Attestnummer' in cleaned_df.columns:
+                initial_count = len(cleaned_df)
+                cleaned_df = cleaned_df.drop_duplicates(subset=['Attestnummer'], keep='first')
+                final_count = len(cleaned_df)
+                if initial_count != final_count:
+                    logger.info(f"Removed {initial_count - final_count} internal duplicates from CSV")
             
             # Step 5: Insert to database with duplicate checking
             insert_result = self.insert_to_database(cleaned_df, batch_size, skip_duplicates)

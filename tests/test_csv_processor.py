@@ -4,8 +4,13 @@ Test script for CSV processor with duplicate handling - Updated for SQL Server 2
 """
 
 import sys
+import os
 import logging
 from pathlib import Path
+
+# Add the project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.services.csv_processor import CSVProcessor, test_database_connection
 from config import Config
 
@@ -37,7 +42,7 @@ def main():
         print("✅ Database connection successful!")
         
         # Find CSV file
-        csv_file = Path("data/downloads/csv/enova_data_2024.csv")
+        csv_file = Path("data/downloads/csv/enova_data_2010.csv")
         if not csv_file.exists():
             print(f"\n❌ CSV file not found: {csv_file}")
             print("Make sure you've downloaded the data first with:")
