@@ -1,0 +1,389 @@
+# MinimBA Energy Certificate Project .gitignore
+
+# =============================================================================
+# Python
+# =============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# =============================================================================
+# IDE & Editor
+# =============================================================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (PyCharm, IntelliJ, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# =============================================================================
+# Operating System
+# =============================================================================
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# Project Specific - MinimBA Energy Certificate Data
+# =============================================================================
+
+# Environment & Configuration
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+config.local.py
+settings.local.py
+
+# Data Files (Downloaded CSV and PDF files)
+data/downloads/csv/*.csv
+data/downloads/pdfs/*.pdf
+data/processed/
+data/temp/
+data/cache/
+
+# Exception: Keep sample or test data (uncomment if you have sample files)
+# !data/samples/
+# !data/test/
+
+# Logs
+data/logs/*.log
+logs/
+*.log
+
+# Database files (if using local SQLite for testing)
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary processing files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Excel files (if generated)
+*.xlsx
+*.xls
+
+# PDF processing temporary files
+pdf_temp/
+extracted_text/
+
+# API response caches
+api_cache/
+cache/
+
+# Jupyter notebooks (if used for analysis)
+*.ipynb
+.ipynb_checkpoints/
+
+# Documentation builds
+docs/build/
+docs/_build/
+
+# =============================================================================
+# Package Management
+# =============================================================================
+# pip
+pip-wheel-metadata/
+
+# Poetry
+poetry.lock
+
+# Conda
+.conda/
+
+# =============================================================================
+# Version Control
+# =============================================================================
+# Git
+.git/
+*.orig
+*.rej
+
+# =============================================================================
+# Testing & Coverage
+# =============================================================================
+.coverage
+htmlcov/
+.pytest_cache/
+test-results/
+coverage-reports/
+
+# =============================================================================
+# Production & Deployment
+# =============================================================================
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+
+# Certificates and keys (NEVER commit these!)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# =============================================================================
+# Application Specific
+# =============================================================================
+# OpenAI API responses cache
+openai_cache/
+
+# PDF text extraction outputs
+pdf_texts/
+
+# Database migration scripts (if auto-generated)
+migrations/auto_*
+
+# Performance profiling
+*.prof
+*.profile
+
+# Memory dumps
+*.dmp
+
+# =============================================================================
+# Archive & Compressed Files
+# =============================================================================
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tar.bz2
+*.gz
+*.bz2
+
+# =============================================================================
+# Office Documents (temporary files)
+# =============================================================================
+~$*.doc*
+~$*.ppt*
+~$*.xls*
+*.tmp
+
+# =============================================================================
+# Keep Important Files (use ! to negate ignore)
+# =============================================================================
+# Keep example configuration
+!.env.example
+!config.example.py
+
+# Keep documentation
+!README.md
+!docs/
+!*.md
+
+# Keep requirements
+!requirements.txt
+!setup.py
+!pyproject.toml
+
+# Keep sample data structure
+!data/README.md
+!data/downloads/.gitkeep
+!data/logs/.gitkeep
