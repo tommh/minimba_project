@@ -6,6 +6,7 @@ Test script for CSV processor with duplicate handling - Updated for SQL Server 2
 import sys
 import os
 import logging
+import argparse
 from pathlib import Path
 
 # Add the project root to Python path
@@ -17,7 +18,7 @@ from config import Config
 # Setup logging for better error visibility
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def main():
+def main(year=None, auto_import=False):
     """Test CSV processing with detailed output"""
     try:
         # Load configuration
@@ -42,12 +43,16 @@ def main():
         print("✅ Database connection successful!")
         
         # Find CSV file
-        csv_file = Path("data/downloads/csv/enova_data_2010.csv")
+        if year is None:
+            # Default to 2010 if no year specified
+            year = 2010
+        
+        csv_file = Path(f"data/downloads/csv/enova_data_{year}.csv")
         if not csv_file.exists():
             print(f"\n❌ CSV file not found: {csv_file}")
             print("Make sure you've downloaded the data first with:")
-            print("  python main.py download --year 2025")
-            print("  OR python main.py both --year 2025")
+            print(f"  python main.py download --year {year}")
+            print(f"  OR python main.py both --year {year}")
             return 1
         
         print(f"\n✓ Found CSV file: {csv_file}")
@@ -121,20 +126,25 @@ def main():
             return 0
         
         print(f"Ready to import {duplicate_check.get('new_count', 'unknown'):,} new records")
-        print("Options:")
-        print("  1. Import only NEW records (skip duplicates) - RECOMMENDED")
-        print("  2. Try to import ALL records (may fail on duplicates)")
-        print("  3. Just show analysis (don't import anything)")
         
-        while True:
-            choice = input("\nEnter your choice (1/2/3): ").strip()
-            if choice in ['1', '2', '3']:
-                break
-            print("Please enter 1, 2, or 3")
-        
-        if choice == '3':
-            print("Analysis complete - no import performed")
-            return 0
+        if auto_import:
+            choice = '1'  # Default to option 1 (skip duplicates)
+            print("Auto-import mode: Using option 1 (skip duplicates)")
+        else:
+            print("Options:")
+            print("  1. Import only NEW records (skip duplicates) - RECOMMENDED")
+            print("  2. Try to import ALL records (may fail on duplicates)")
+            print("  3. Just show analysis (don't import anything)")
+            
+            while True:
+                choice = input("\nEnter your choice (1/2/3): ").strip()
+                if choice in ['1', '2', '3']:
+                    break
+                print("Please enter 1, 2, or 3")
+            
+            if choice == '3':
+                print("Analysis complete - no import performed")
+                return 0
         
         # Step 4: Process the CSV
         skip_duplicates = (choice == '1')
@@ -225,4 +235,12 @@ def main():
         return 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Test CSV processor with year parameter')
+    parser.add_argument('--year', type=int, help='Year for the CSV file (e.g., 2011 for enova_data_2011.csv)')
+    parser.add_argument('--auto-import', action='store_true', help='Automatically use option 1 (skip duplicates) without prompting')
+    
+    args = parser.parse_args()
+    
+    # Run the main function with arguments
+    sys.exit(main(year=args.year, auto_import=args.auto_import))
