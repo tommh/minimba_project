@@ -15,6 +15,9 @@ def run_csv_import(year, auto_import=True):
     Args:
         year (int): Year to import (e.g., 2010, 2011, 2012)
         auto_import (bool): Whether to use auto-import mode (default: True)
+
+
+     eg. python run_csv_import.py --start-year 2013 --end-year 2014   
     """
     print(f"🔄 Starting CSV import for year {year}...")
     
