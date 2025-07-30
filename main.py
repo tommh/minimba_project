@@ -7,6 +7,7 @@ import sys
 import argparse
 from pathlib import Path
 from src.services.file_downloader import FileDownloader
+from src.services.api_client import EnovaApiClient
 from config import Config
 
 def download_year_data(config, year, force=False):
@@ -72,6 +73,38 @@ def show_config(config):
         print(f"{key}: {value}")
     print("=" * 50)
 
+def process_api_certificates(config, rows=10):
+    """Process energy certificates through API"""
+    print(f"Processing {rows} certificates through API...")
+    
+    try:
+        client = EnovaApiClient(config)
+        result = client.process_certificates(rows)
+        
+        if result['success']:
+            print(f"✓ API processing completed successfully")
+            print(f"  Parameters logged: {result['parameters_logged']}")
+            print(f"  API calls made: {result['api_calls']}")
+            print(f"  Records inserted: {result['records_inserted']}")
+            print(f"  Processing time: {result['processing_time']:.3f} seconds")
+            if result['api_calls'] > 0:
+                print(f"  Avg time per API call: {result['avg_time_per_api_call']:.4f} seconds")
+            
+            # Show status breakdown if available
+            if 'status_breakdown' in result and result['status_breakdown']:
+                print("\n  📊 Status breakdown:")
+                for status, info in result['status_breakdown'].items():
+                    if status != '_totals':
+                        print(f"    {status}: {info['count']} calls → {info['records']} records returned")
+            return True
+        else:
+            print(f"✗ API processing failed: {result['message']}")
+            return False
+            
+    except Exception as e:
+        print(f"✗ API processing error: {str(e)}")
+        return False
+
 def main():
     """Main function with command line argument parsing"""
     parser = argparse.ArgumentParser(
@@ -84,6 +117,7 @@ Examples:
   python main.py download 2025 --force            # Force re-download 2025
   python main.py list                             # List downloaded files
   python main.py config                           # Show configuration
+  python main.py api --rows 5                     # Process 5 certificates through API
         """
     )
     
@@ -100,6 +134,11 @@ Examples:
     
     # Config command
     subparsers.add_parser('config', help='Show current configuration')
+    
+    # API command
+    api_parser = subparsers.add_parser('api', help='Process certificates through API')
+    api_parser.add_argument('--rows', type=int, default=10, 
+                           help='Number of certificate rows to process (default: 10)')
     
     args = parser.parse_args()
     
@@ -129,6 +168,10 @@ Examples:
         elif args.command == 'config':
             show_config(config)
             return 0
+            
+        elif args.command == 'api':
+            success = process_api_certificates(config, args.rows)
+            return 0 if success else 1
             
         else:
             # Default behavior - download current year
