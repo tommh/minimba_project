@@ -73,6 +73,25 @@ def show_config(config):
         print(f"{key}: {value}")
     print("=" * 50)
 
+def cleanup_pending_records(config, hours=24):
+    """Clean up old pending records"""
+    print(f"Cleaning up pending records older than {hours} hours...")
+    
+    try:
+        client = EnovaApiClient(config)
+        cleanup_count = client.cleanup_old_pending_records(hours)
+        
+        if cleanup_count > 0:
+            print(f"✓ Cleaned up {cleanup_count} old pending records")
+        else:
+            print("✓ No old pending records found")
+        
+        return True
+        
+    except Exception as e:
+        print(f"✗ Cleanup failed: {str(e)}")
+        return False
+
 def process_api_certificates(config, rows=10):
     """Process energy certificates through API"""
     print(f"Processing {rows} certificates through API...")
@@ -118,6 +137,7 @@ Examples:
   python main.py list                             # List downloaded files
   python main.py config                           # Show configuration
   python main.py api --rows 5                     # Process 5 certificates through API
+  python main.py cleanup --hours 1                # Clean up pending records older than 1 hour
         """
     )
     
@@ -139,6 +159,11 @@ Examples:
     api_parser = subparsers.add_parser('api', help='Process certificates through API')
     api_parser.add_argument('--rows', type=int, default=10, 
                            help='Number of certificate rows to process (default: 10)')
+    
+    # Cleanup command
+    cleanup_parser = subparsers.add_parser('cleanup', help='Clean up old pending records')
+    cleanup_parser.add_argument('--hours', type=int, default=24, 
+                               help='Age in hours for records to be considered stale (default: 24)')
     
     args = parser.parse_args()
     
@@ -171,6 +196,10 @@ Examples:
             
         elif args.command == 'api':
             success = process_api_certificates(config, args.rows)
+            return 0 if success else 1
+            
+        elif args.command == 'cleanup':
+            success = cleanup_pending_records(config, args.hours)
             return 0 if success else 1
             
         else:

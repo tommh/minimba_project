@@ -280,6 +280,17 @@ class EnovaApiClient:
                 self.api_call_count += 1
             
             if response.status_code != 200:
+                if response.status_code == 400:
+                    try:
+                        error_data = response.json()
+                        if ("errors" in error_data and 
+                            "EnergiattestResponse" in error_data["errors"] and
+                            any("more than twenty five" in str(err).lower() for err in error_data["errors"]["EnergiattestResponse"])):
+                            logger.warning(f"API returned too many results (25+ eiendoms): {response.text}")
+                            return "TOO_MANY_RESULTS"  # Special return value
+                    except:
+                        pass  # Fall through to general error handling
+                
                 logger.error(f"API call failed with status {response.status_code}: {response.text}")
                 return None
             
@@ -432,6 +443,11 @@ class EnovaApiClient:
         batch_datetime = datetime.now()
         
         try:
+            # Step 0: Clean up old pending records from previous interrupted runs
+            cleanup_count = self.cleanup_old_pending_records(hours_old=1)  # Clean records older than 1 hour
+            if cleanup_count > 0:
+                logger.info(f"Cleaned up {cleanup_count} stale pending records from previous runs")
+            
             # Step 1: Get parameters from database
             logger.info(f"Starting certificate processing for {top_rows} rows")
             parameters = self.get_api_parameters(top_rows)
@@ -461,7 +477,11 @@ class EnovaApiClient:
                     # Call API
                     api_data = self.call_energiattest_api(param)
                     
-                    if api_data:
+                    if api_data == "TOO_MANY_RESULTS":
+                        records_returned = 0
+                        status_message = "Too many results (25+ eiendoms)"
+                        logger.warning(f"CertificateID {certificate_id}: Too many results returned by API")
+                    elif api_data:
                         records_returned = len(api_data)
                         # Save results
                         records_saved = self.save_energiattest_data(api_data, param, batch_datetime)
@@ -537,6 +557,44 @@ class EnovaApiClient:
                 'records_inserted': self.insert_count,
                 'processing_time': time.perf_counter() - start_time
             }
+    
+    def cleanup_old_pending_records(self, hours_old: int = 24) -> int:
+        """
+        Clean up old pending records that were never completed
+        
+        Args:
+            hours_old: Age in hours for records to be considered stale (default: 24)
+            
+        Returns:
+            Number of records cleaned up
+        """
+        conn = None
+        try:
+            conn = self._get_database_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                DELETE FROM [ev_enova].[EnovaApi_Energiattest_url_log] 
+                WHERE status_message = 'Pending' 
+                  AND LogDate < DATEADD(HOUR, ?, GETDATE())
+            """, (-hours_old,))
+            
+            conn.commit()
+            deleted_count = cursor.rowcount
+            
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} old pending records (older than {hours_old} hours)")
+            else:
+                logger.debug(f"No old pending records found (older than {hours_old} hours)")
+            
+            return deleted_count
+            
+        except Exception as e:
+            logger.error(f"Error cleaning up old pending records: {str(e)}")
+            return 0
+        finally:
+            if conn:
+                conn.close()
     
     def get_processing_statistics(self, batch_datetime: datetime) -> Dict[str, Any]:
         """

@@ -172,6 +172,14 @@ BEGIN
         AND NOT EXISTS (
             SELECT 1 FROM [ev_enova].[EnovaApi_Energiattest_url_log] EU
             WHERE EU.[CertificateID] = IH.[CertificateID]
+              AND EU.status_message != 'Pending'  -- Exclude only successfully processed ones
+        )
+        -- Also exclude certificates with only old pending records (older than 1 hour)
+        AND NOT EXISTS (
+            SELECT 1 FROM [ev_enova].[EnovaApi_Energiattest_url_log] EU
+            WHERE EU.[CertificateID] = IH.[CertificateID]
+              AND EU.status_message = 'Pending'
+              AND EU.LogDate > DATEADD(HOUR, -1, GETDATE())  -- Recent pending records
         )
     ORDER BY IH.Utstedelsesdato DESC;
 END
