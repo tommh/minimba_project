@@ -14,7 +14,7 @@ if response.status_code == 400:
         return "TOO_MANY_RESULTS"  # Special status
 ```
 
-**Status Message**: `"Too many results (25+ eiendoms)"`
+**Status Message**: `"Too many results (25+ eiendommer)"`
 **Records Returned**: `0`
 
 ### 2. 🔄 **Pending Records Issue**
@@ -48,7 +48,7 @@ AND NOT EXISTS (
 ### **New Status Messages**:
 1. `"Success"` - API call successful, data saved
 2. `"No records found"` - API returned empty result
-3. `"Too many results (25+ eiendoms)"` - API returned 25+ results error
+3. `"Too many results (25+ eiendommer)"` - API returned 25+ results error
 4. `"Error: [details]"` - API call or processing failed
 5. `"API returned data but no records saved"` - Data returned but DB save failed
 
@@ -89,7 +89,7 @@ python main.py api --rows 10             # Automatically cleans up before proces
 📊 Status breakdown:
     Success: 3 calls → 8 records returned
     No records found: 1 calls → 0 records returned
-    Too many results (25+ eiendoms): 1 calls → 0 records returned
+    Too many results (25+ eiendommer): 1 calls → 0 records returned
 ```
 
 ## 🔧 **Implementation Details**

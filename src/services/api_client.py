@@ -286,7 +286,7 @@ class EnovaApiClient:
                         if ("errors" in error_data and 
                             "EnergiattestResponse" in error_data["errors"] and
                             any("more than twenty five" in str(err).lower() for err in error_data["errors"]["EnergiattestResponse"])):
-                            logger.warning(f"API returned too many results (25+ eiendoms): {response.text}")
+                            logger.warning(f"API returned too many results (25+ eiendommer): {response.text}")
                             return "TOO_MANY_RESULTS"  # Special return value
                     except:
                         pass  # Fall through to general error handling
@@ -479,7 +479,7 @@ class EnovaApiClient:
                     
                     if api_data == "TOO_MANY_RESULTS":
                         records_returned = 0
-                        status_message = "Too many results (25+ eiendoms)"
+                        status_message = "Too many results (25+ eiendommer)"
                         logger.warning(f"CertificateID {certificate_id}: Too many results returned by API")
                     elif api_data:
                         records_returned = len(api_data)
