@@ -92,6 +92,70 @@ def cleanup_pending_records(config, hours=24):
         print(f"✗ Cleanup failed: {str(e)}")
         return False
 
+def scan_pdf_files(config, force=False, batch_size=100):
+    """Scan PDF directory and populate database table"""
+    print(f"Scanning PDF files in {config.DOWNLOAD_PDF_PATH}...")
+    
+    try:
+        from src.services.pdf_scanner import PDFFileScanner
+        
+        scanner = PDFFileScanner(config)
+        result = scanner.scan_and_populate(batch_size=batch_size, skip_existing=not force)
+        
+        if result['success']:
+            print(f"✓ PDF scan completed successfully")
+            print(f"  Files processed: {result['files_processed']:,}")
+            print(f"  Files added to database: {result['files_added']:,}")
+            print(f"  Files skipped (existing): {result['files_skipped']:,}")
+            if result.get('files_deleted', 0) > 0:
+                print(f"  Files deleted from database: {result['files_deleted']:,}")
+            return True
+        else:
+            print(f"✗ PDF scan failed")
+            return False
+            
+    except ImportError:
+        print(f"✗ PDF scanner module not found")
+        return False
+    except Exception as e:
+        print(f"✗ PDF scan error: {str(e)}")
+        return False
+
+def download_pdfs(config, count=10, delay=1.0):
+    """Download PDF files from certificate URLs"""
+    print(f"Downloading up to {count} PDF files...")
+    
+    try:
+        from pdf_downloader import PDFDownloader
+        
+        downloader = PDFDownloader(config)
+        result = downloader.download_batch(top_rows=count, delay_between_downloads=delay)
+        
+        if result['success']:
+            print(f"✓ PDF download completed successfully")
+            print(f"  URLs processed: {result['attempted']:,}")
+            print(f"  Downloads successful: {result['successful']:,}")
+            print(f"  Downloads failed: {result['failed']:,}")
+            print(f"  Downloads skipped: {result['skipped']:,}")
+            
+            # Calculate success rate
+            total_attempts = result['successful'] + result['failed']
+            if total_attempts > 0:
+                success_rate = (result['successful'] / total_attempts) * 100
+                print(f"  Success rate: {success_rate:.1f}%")
+            
+            return True
+        else:
+            print(f"✗ PDF download failed: {result.get('message', 'Unknown error')}")
+            return False
+            
+    except ImportError:
+        print(f"✗ PDF downloader module not found")
+        return False
+    except Exception as e:
+        print(f"✗ PDF download error: {str(e)}")
+        return False
+
 def process_api_certificates(config, rows=10):
     """Process energy certificates through API"""
     print(f"Processing {rows} certificates through API...")
@@ -138,6 +202,9 @@ Examples:
   python main.py config                           # Show configuration
   python main.py api --rows 5                     # Process 5 certificates through API
   python main.py cleanup --hours 1                # Clean up pending records older than 1 hour
+  python main.py scan-pdf                         # Scan PDF directory and populate database
+  python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
+  python main.py download-pdf --count 20          # Download 20 PDF files from URLs
         """
     )
     
@@ -164,6 +231,20 @@ Examples:
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up old pending records')
     cleanup_parser.add_argument('--hours', type=int, default=24, 
                                help='Age in hours for records to be considered stale (default: 24)')
+    
+    # Scan PDF command
+    scan_parser = subparsers.add_parser('scan-pdf', help='Scan PDF directory and populate database')
+    scan_parser.add_argument('--force', action='store_true', 
+                            help='Insert all files, even if they already exist in database')
+    scan_parser.add_argument('--batch-size', type=int, default=100,
+                            help='Number of files to insert per batch (default: 100)')
+    
+    # Download PDF command
+    download_parser = subparsers.add_parser('download-pdf', help='Download PDF files from certificate URLs')
+    download_parser.add_argument('--count', type=int, default=10,
+                                help='Number of PDFs to download (default: 10)')
+    download_parser.add_argument('--delay', type=float, default=1.0,
+                                help='Delay between downloads in seconds (default: 1.0)')
     
     args = parser.parse_args()
     
@@ -200,6 +281,14 @@ Examples:
             
         elif args.command == 'cleanup':
             success = cleanup_pending_records(config, args.hours)
+            return 0 if success else 1
+            
+        elif args.command == 'scan-pdf':
+            success = scan_pdf_files(config, args.force, args.batch_size)
+            return 0 if success else 1
+            
+        elif args.command == 'download-pdf':
+            success = download_pdfs(config, args.count, args.delay)
             return 0 if success else 1
             
         else:
