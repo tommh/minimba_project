@@ -201,6 +201,45 @@ def process_pdf_text(config, count=10, use_multiprocess=False, num_processes=Non
         print(f"✗ PDF processing error: {str(e)}")
         return False
 
+
+def clean_pdf_text(config, count=10, use_multiprocess=False, num_processes=None, aggressive=False):
+    """Clean extracted PDF text using regex patterns"""
+    print(f"Cleaning up to {count} extracted PDF text records...")
+    
+    try:
+        if use_multiprocess:
+            from src.services.text_cleaner import process_text_cleaning_multiprocess
+            result = process_text_cleaning_multiprocess(config, count, num_processes, aggressive)
+        else:
+            from src.services.text_cleaner import TextCleaningProcessor
+            processor = TextCleaningProcessor(config)
+            result = processor.process_batch_single_thread(count, aggressive)
+        
+        if result['success']:
+            print(f"✓ PDF text cleaning completed successfully")
+            print(f"  Records processed: {result['files_processed']:,}")
+            print(f"  Successful cleanings: {result['files_successful']:,}")
+            print(f"  Failed cleanings: {result['files_failed']:,}")
+            print(f"  Processing time: {result['processing_time']:.1f} seconds")
+            
+            if result['files_processed'] > 0:
+                success_rate = (result['files_successful'] / result['files_processed']) * 100
+                rate = result['files_processed'] / result['processing_time'] if result['processing_time'] > 0 else 0
+                print(f"  Success rate: {success_rate:.1f}%")
+                print(f"  Processing rate: {rate:.1f} records/second")
+            
+            return True
+        else:
+            print(f"✗ Text cleaning failed: {result.get('message', 'Unknown error')}")
+            return False
+            
+    except ImportError:
+        print(f"✗ Text cleaner module not found")
+        return False
+    except Exception as e:
+        print(f"✗ Text cleaning error: {str(e)}")
+        return False
+
 def process_api_certificates(config, rows=10):
     """Process energy certificates through API"""
     print(f"Processing {rows} certificates through API...")
@@ -248,10 +287,12 @@ Examples:
   python main.py api --rows 5                     # Process 5 certificates through API
   python main.py cleanup --hours 1                # Clean up pending records older than 1 hour
   python main.py scan-pdf                         # Scan PDF directory and populate database
-  python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
-  python main.py download-pdf --count 20          # Download 20 PDF files from URLs
-  python main.py process-pdf --count 50           # Extract text from 50 PDF files
-  python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
+      python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
+    python main.py download-pdf --count 20          # Download 20 PDF files from URLs
+    python main.py process-pdf --count 50           # Extract text from 50 PDF files
+    python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
+    python main.py clean-text --count 100           # Clean 100 extracted text records
+    python main.py clean-text --multiprocess        # Use multiprocessing for faster cleaning
         """
     )
     
@@ -302,6 +343,17 @@ Examples:
     process_parser.add_argument('--processes', type=int, default=None,
                                help='Number of processes to use (default: auto-detect)')
     
+    # Clean PDF text command
+    clean_parser = subparsers.add_parser('clean-text', help='Clean extracted PDF text using regex patterns')
+    clean_parser.add_argument('--count', type=int, default=10,
+                             help='Number of records to clean (default: 10)')
+    clean_parser.add_argument('--multiprocess', action='store_true',
+                             help='Use multiprocessing for faster cleaning')
+    clean_parser.add_argument('--processes', type=int, default=None,
+                             help='Number of processes to use (default: auto-detect)')
+    clean_parser.add_argument('--aggressive', action='store_true',
+                             help='Use aggressive cleaning (removes more content)')
+    
     args = parser.parse_args()
     
     # Load configuration
@@ -349,6 +401,10 @@ Examples:
             
         elif args.command == 'process-pdf':
             success = process_pdf_text(config, args.count, args.multiprocess, args.processes)
+            return 0 if success else 1
+            
+        elif args.command == 'clean-text':
+            success = clean_pdf_text(config, args.count, args.multiprocess, args.processes, args.aggressive)
             return 0 if success else 1
             
         else:
