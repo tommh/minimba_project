@@ -156,6 +156,51 @@ def download_pdfs(config, count=10, delay=1.0):
         print(f"✗ PDF download error: {str(e)}")
         return False
 
+def process_pdf_text(config, count=10, use_multiprocess=False, num_processes=None):
+    """Extract text from PDF files using Docling"""
+    print(f"Processing up to {count} PDF files for text extraction...")
+    
+    try:
+        # Check if docling is available
+        try:
+            from docling.document_converter import DocumentConverter
+        except ImportError:
+            print(f"✗ Docling not installed. Please install with: pip install docling")
+            return False
+        
+        if use_multiprocess:
+            from src.services.pdf_processor import process_pdfs_multiprocess
+            result = process_pdfs_multiprocess(config, count, num_processes)
+        else:
+            from src.services.pdf_processor import PDFTextProcessor
+            processor = PDFTextProcessor(config)
+            result = processor.process_batch_single_thread(count)
+        
+        if result['success']:
+            print(f"✓ PDF text extraction completed successfully")
+            print(f"  Files processed: {result['files_processed']:,}")
+            print(f"  Successful extractions: {result['files_successful']:,}")
+            print(f"  Failed extractions: {result['files_failed']:,}")
+            print(f"  Processing time: {result['processing_time']:.1f} seconds")
+            
+            if result['files_processed'] > 0:
+                success_rate = (result['files_successful'] / result['files_processed']) * 100
+                rate = result['files_processed'] / result['processing_time'] if result['processing_time'] > 0 else 0
+                print(f"  Success rate: {success_rate:.1f}%")
+                print(f"  Processing rate: {rate:.1f} files/second")
+            
+            return True
+        else:
+            print(f"✗ PDF processing failed: {result.get('message', 'Unknown error')}")
+            return False
+            
+    except ImportError:
+        print(f"✗ PDF processor module not found")
+        return False
+    except Exception as e:
+        print(f"✗ PDF processing error: {str(e)}")
+        return False
+
 def process_api_certificates(config, rows=10):
     """Process energy certificates through API"""
     print(f"Processing {rows} certificates through API...")
@@ -205,6 +250,8 @@ Examples:
   python main.py scan-pdf                         # Scan PDF directory and populate database
   python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
   python main.py download-pdf --count 20          # Download 20 PDF files from URLs
+  python main.py process-pdf --count 50           # Extract text from 50 PDF files
+  python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
         """
     )
     
@@ -245,6 +292,15 @@ Examples:
                                 help='Number of PDFs to download (default: 10)')
     download_parser.add_argument('--delay', type=float, default=1.0,
                                 help='Delay between downloads in seconds (default: 1.0)')
+    
+    # Process PDF text command
+    process_parser = subparsers.add_parser('process-pdf', help='Extract text from PDF files using Docling')
+    process_parser.add_argument('--count', type=int, default=10,
+                               help='Number of PDFs to process (default: 10)')
+    process_parser.add_argument('--multiprocess', action='store_true',
+                               help='Use multiprocessing for faster extraction')
+    process_parser.add_argument('--processes', type=int, default=None,
+                               help='Number of processes to use (default: auto-detect)')
     
     args = parser.parse_args()
     
@@ -289,6 +345,10 @@ Examples:
             
         elif args.command == 'download-pdf':
             success = download_pdfs(config, args.count, args.delay)
+            return 0 if success else 1
+            
+        elif args.command == 'process-pdf':
+            success = process_pdf_text(config, args.count, args.multiprocess, args.processes)
             return 0 if success else 1
             
         else:
