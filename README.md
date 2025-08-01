@@ -102,6 +102,12 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_MAX_TOKENS=2000
 OPENAI_TEMPERATURE=0.3
 
+# LangSmith Tracing (Optional)
+LANGSMITH_API_KEY=your-langsmith-api-key-here
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+LANGSMITH_PROJECT=minimba-energy-certificates
+LANGSMITH_TRACING_ENABLED=true
+
 # File Storage
 BASE_DATA_PATH=./data
 ```
@@ -151,6 +157,7 @@ BASE_DATA_PATH=./data
 - Rate limiting and error handling
 - Comprehensive logging and statistics
 - Support for multiple prompt versions (PROMPT_V1_NOR, PROMPT_V2_NOR)
+- **LangSmith tracing integration** for monitoring and debugging OpenAI calls
 
 ### ✅ Testing Framework
 - Comprehensive API client testing
@@ -179,6 +186,7 @@ python tests/test_api_client.py --full --rows 5
 python main.py openai --limit 5                 # Test with 5 prompts
 python main.py openai-stats                     # Check processing statistics
 python test_openai_setup.py                     # Test configuration
+python test_langsmith_setup.py                  # Test LangSmith integration
 python example_openai_usage.py                  # Alternative test script
 
 # Run setup verification

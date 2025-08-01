@@ -47,6 +47,9 @@ docling>=1.0.0
 # OpenAI API client
 openai>=1.0.0
 
+# LangSmith for tracing and monitoring OpenAI calls
+langsmith>=0.1.0
+
 # =============================================================================
 # Development and Testing Dependencies
 # =============================================================================

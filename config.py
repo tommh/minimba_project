@@ -134,6 +134,23 @@ class Config:
     def OPENAI_TEMPERATURE(self) -> float:
         return float(os.getenv('OPENAI_TEMPERATURE', '0.3'))
     
+    # LangSmith Configuration
+    @property
+    def LANGSMITH_API_KEY(self) -> Optional[str]:
+        return os.getenv('LANGSMITH_API_KEY')
+    
+    @property
+    def LANGSMITH_ENDPOINT(self) -> str:
+        return os.getenv('LANGSMITH_ENDPOINT', 'https://api.smith.langchain.com')
+    
+    @property
+    def LANGSMITH_PROJECT(self) -> str:
+        return os.getenv('LANGSMITH_PROJECT', 'minimba-energy-certificates')
+    
+    @property
+    def LANGSMITH_TRACING_ENABLED(self) -> bool:
+        return os.getenv('LANGSMITH_TRACING_ENABLED', 'true').lower() in ('yes', 'true', '1')
+    
     # Processing Configuration
     @property
     def BATCH_SIZE(self) -> int:
@@ -226,6 +243,15 @@ class Config:
         if not self.OPENAI_API_KEY:
             logger.warning("OPENAI_API_KEY not set - OpenAI features will be disabled")
         
+        # Check LangSmith configuration if tracing is enabled
+        if self.LANGSMITH_TRACING_ENABLED:
+            if not self.LANGSMITH_API_KEY:
+                logger.warning("LANGSMITH_API_KEY not set - LangSmith tracing will be disabled")
+            else:
+                logger.info(f"LangSmith tracing enabled for project: {self.LANGSMITH_PROJECT}")
+        else:
+            logger.info("LangSmith tracing disabled")
+        
         # Create required directories
         try:
             for path in [self.DOWNLOAD_CSV_PATH, self.DOWNLOAD_PDF_PATH, 
@@ -254,7 +280,9 @@ class Config:
             'batch_size': self.BATCH_SIZE,
             'log_level': self.LOG_LEVEL,
             'openai_model': self.OPENAI_MODEL,
-            'openai_configured': bool(self.OPENAI_API_KEY)
+            'openai_configured': bool(self.OPENAI_API_KEY),
+            'langsmith_project': self.LANGSMITH_PROJECT,
+            'langsmith_tracing_enabled': self.LANGSMITH_TRACING_ENABLED and bool(self.LANGSMITH_API_KEY)
         }
 
 # Global config instance

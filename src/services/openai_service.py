@@ -12,6 +12,17 @@ from typing import Dict, Any, List, Optional, Tuple
 import logging
 import re
 
+# LangSmith tracing imports
+try:
+    from langsmith import Client
+    from langsmith.run_helpers import traceable
+    import os
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    LANGSMITH_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("LangSmith not available - tracing will be disabled")
+
 logger = logging.getLogger(__name__)
 
 class OpenAIEnergyService:
@@ -31,6 +42,23 @@ class OpenAIEnergyService:
         else:
             logger.error("OpenAI API key not configured")
             raise ValueError("OPENAI_API_KEY is required")
+        
+        # Initialize LangSmith client for tracing
+        self.langsmith_client = None
+        if (LANGSMITH_AVAILABLE and 
+            config.LANGSMITH_TRACING_ENABLED and 
+            config.LANGSMITH_API_KEY):
+            try:
+                self.langsmith_client = Client(
+                    api_key=config.LANGSMITH_API_KEY,
+                    api_url=config.LANGSMITH_ENDPOINT
+                )
+                logger.info(f"LangSmith client initialized for project: {config.LANGSMITH_PROJECT}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize LangSmith client: {str(e)}")
+                self.langsmith_client = None
+        else:
+            logger.info("LangSmith tracing disabled or not configured")
     
     def _get_database_connection(self):
         """Get database connection using configuration"""
@@ -58,6 +86,37 @@ class OpenAIEnergyService:
         except Exception as e:
             logger.error(f"Database connection failed: {str(e)}")
             raise
+    
+    def _create_langsmith_trace(self, file_id: int, prompt_version: str) -> Optional[Dict[str, Any]]:
+        """
+        Create a LangSmith trace for OpenAI API call
+        
+        Args:
+            file_id: The file ID being processed
+            prompt_version: The prompt version being used
+            
+        Returns:
+            Trace metadata or None if LangSmith not available
+        """
+        if not self.langsmith_client:
+            return None
+        
+        try:
+            trace_metadata = {
+                'file_id': file_id,
+                'prompt_version': prompt_version,
+                'project': self.config.LANGSMITH_PROJECT,
+                'tags': ['energy-certificate', 'openai', 'minimba'],
+                'metadata': {
+                    'model': self.config.OPENAI_MODEL,
+                    'max_tokens': self.config.OPENAI_MAX_TOKENS,
+                    'temperature': self.config.OPENAI_TEMPERATURE
+                }
+            }
+            return trace_metadata
+        except Exception as e:
+            logger.warning(f"Failed to create LangSmith trace metadata: {str(e)}")
+            return None
     
     def get_prompts_data(self, prompt_column: str = "PROMPT_V1_NOR", limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
@@ -120,43 +179,95 @@ class OpenAIEnergyService:
             if conn:
                 conn.close()
     
-    def call_openai_api(self, prompt_text: str) -> Optional[Dict[str, str]]:
+    def call_openai_api(self, prompt_text: str, file_id: Optional[int] = None, 
+                       prompt_version: Optional[str] = None) -> Optional[Dict[str, str]]:
         """
         Call OpenAI API with the prompt and parse the response
         
         Args:
             prompt_text: The prompt text to send to OpenAI
+            file_id: Optional file ID for tracing
+            prompt_version: Optional prompt version for tracing
             
         Returns:
             Dictionary with parsed response containing AboutEstate, Positives, Evaluation
             or None if API call failed
         """
+        # Create LangSmith trace if available
+        trace_metadata = None
+        if file_id and prompt_version:
+            trace_metadata = self._create_langsmith_trace(file_id, prompt_version)
+        
         try:
-            # Call OpenAI API
-            response = self.client.chat.completions.create(
-                model=self.config.OPENAI_MODEL,
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "Du er ekspert i energiattester og eiendomsanalyse. Analyser den gitte energiattesten og gi en strukturert respons i det spesifiserte formatet."
-                    },
-                    {
-                        "role": "user", 
-                        "content": prompt_text
-                    }
-                ],
-                max_tokens=self.config.OPENAI_MAX_TOKENS,
-                temperature=self.config.OPENAI_TEMPERATURE
-            )
-            
-            # Extract the response text
-            response_text = response.choices[0].message.content.strip()
-            logger.debug(f"OpenAI API response received: {len(response_text)} characters")
-            
-            # Parse the structured response
-            parsed_response = self._parse_openai_response(response_text)
-            
-            return parsed_response
+            # Call OpenAI API with tracing if available
+            if self.langsmith_client and trace_metadata:
+                # Set up LangSmith environment variables for tracing
+                os.environ["LANGCHAIN_TRACING_V2"] = "true"
+                os.environ["LANGCHAIN_ENDPOINT"] = self.config.LANGSMITH_ENDPOINT
+                os.environ["LANGCHAIN_API_KEY"] = self.config.LANGSMITH_API_KEY
+                os.environ["LANGCHAIN_PROJECT"] = self.config.LANGSMITH_PROJECT
+                
+                # Use LangSmith tracing with traceable decorator
+                @traceable(
+                    project_name=self.config.LANGSMITH_PROJECT,
+                    tags=trace_metadata['tags'],
+                    metadata=trace_metadata['metadata']
+                )
+                def traced_openai_call(prompt_text, file_id, prompt_version):
+                    response = self.client.chat.completions.create(
+                        model=self.config.OPENAI_MODEL,
+                        messages=[
+                            {
+                                "role": "system", 
+                                "content": "Du er ekspert i energiattester og eiendomsanalyse. Analyser den gitte energiattesten og gi en strukturert respons i det spesifiserte formatet."
+                            },
+                            {
+                                "role": "user", 
+                                "content": prompt_text
+                            }
+                        ],
+                        max_tokens=self.config.OPENAI_MAX_TOKENS,
+                        temperature=self.config.OPENAI_TEMPERATURE
+                    )
+                    return response
+                
+                # Call the traced function
+                response = traced_openai_call(prompt_text, file_id, prompt_version)
+                
+                # Extract the response text
+                response_text = response.choices[0].message.content.strip()
+                
+                # Parse the structured response
+                parsed_response = self._parse_openai_response(response_text)
+                
+                logger.debug(f"OpenAI API response traced: {len(response_text)} characters")
+                return parsed_response
+            else:
+                # Call OpenAI API without tracing
+                response = self.client.chat.completions.create(
+                    model=self.config.OPENAI_MODEL,
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "Du er ekspert i energiattester og eiendomsanalyse. Analyser den gitte energiattesten og gi en strukturert respons i det spesifiserte formatet."
+                        },
+                        {
+                            "role": "user", 
+                            "content": prompt_text
+                        }
+                    ],
+                    max_tokens=self.config.OPENAI_MAX_TOKENS,
+                    temperature=self.config.OPENAI_TEMPERATURE
+                )
+                
+                # Extract the response text
+                response_text = response.choices[0].message.content.strip()
+                logger.debug(f"OpenAI API response received: {len(response_text)} characters")
+                
+                # Parse the structured response
+                parsed_response = self._parse_openai_response(response_text)
+                
+                return parsed_response
             
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {str(e)}")
@@ -456,8 +567,12 @@ class OpenAIEnergyService:
                     if i > 0:
                         time.sleep(delay_between_calls)
                     
-                    # Call OpenAI API
-                    parsed_response = self.call_openai_api(prompt_text)
+                    # Call OpenAI API with tracing
+                    parsed_response = self.call_openai_api(
+                        prompt_text=prompt_text,
+                        file_id=file_id,
+                        prompt_version=prompt_version
+                    )
                     
                     if parsed_response:
                         # Save response to database
