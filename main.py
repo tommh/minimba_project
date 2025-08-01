@@ -8,6 +8,7 @@ import argparse
 from pathlib import Path
 from src.services.file_downloader import FileDownloader
 from src.services.api_client import EnovaApiClient
+from src.services.openai_service import OpenAIEnergyService
 from config import Config
 
 def download_year_data(config, year, force=False):
@@ -272,6 +273,63 @@ def process_api_certificates(config, rows=10):
         print(f"✗ API processing error: {str(e)}")
         return False
 
+def process_openai_prompts(config, prompt_column="PROMPT_V1_NOR", limit=10, delay=1.0):
+    """Process energy certificate prompts with OpenAI API"""
+    print(f"Processing {limit} prompts with OpenAI using column: {prompt_column}")
+    
+    try:
+        openai_service = OpenAIEnergyService(config)
+        result = openai_service.process_prompts(
+            prompt_column=prompt_column,
+            limit=limit,
+            delay_between_calls=delay
+        )
+        
+        if result['success']:
+            print("✓ OpenAI processing completed successfully")
+            print(f"  Total prompts: {result['total_prompts']}")
+            print(f"  Successfully processed: {result['prompts_processed']}")
+            print(f"  Errors: {result['errors']}")
+            print(f"  Processing time: {result['processing_time']:.3f} seconds")
+            print(f"  Success rate: {result['success_rate']:.1f}%")
+            return True
+        else:
+            print(f"✗ OpenAI processing failed: {result['message']}")
+            return False
+            
+    except Exception as e:
+        print(f"✗ OpenAI processing error: {str(e)}")
+        return False
+
+def show_openai_statistics(config, prompt_version=None):
+    """Show OpenAI processing statistics"""
+    try:
+        openai_service = OpenAIEnergyService(config)
+        stats = openai_service.get_processing_statistics(prompt_version)
+        
+        if not stats:
+            print("No OpenAI processing statistics found")
+            return True
+        
+        print("OpenAI Processing Statistics:")
+        print("=" * 50)
+        
+        for prompt_ver, stat_data in stats.items():
+            print(f"\nPrompt Version: {prompt_ver}")
+            print(f"  Total responses: {stat_data['total_responses']}")
+            print(f"  First processed: {stat_data['first_processed']}")
+            print(f"  Last processed: {stat_data['last_processed']}")
+            print(f"  Completion rates:")
+            print(f"    About Estate: {stat_data['completion_rate']['about_estate']:.1f}%")
+            print(f"    Positives: {stat_data['completion_rate']['positives']:.1f}%")
+            print(f"    Evaluation: {stat_data['completion_rate']['evaluation']:.1f}%")
+        
+        return True
+        
+    except Exception as e:
+        print(f"✗ Error getting statistics: {str(e)}")
+        return False
+
 def main():
     """Main function with command line argument parsing"""
     parser = argparse.ArgumentParser(
@@ -293,6 +351,9 @@ Examples:
     python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
     python main.py clean-text --count 100           # Clean 100 extracted text records
     python main.py clean-text --multiprocess        # Use multiprocessing for faster cleaning
+    python main.py openai --limit 20                # Process 20 prompts with OpenAI
+    python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
+    python main.py openai-stats                     # Show OpenAI processing statistics
         """
     )
     
@@ -354,6 +415,18 @@ Examples:
     clean_parser.add_argument('--aggressive', action='store_true',
                              help='Use aggressive cleaning (removes more content)')
     
+    # OpenAI command
+    openai_parser = subparsers.add_parser('openai', help='Process energy certificates with OpenAI API')
+    openai_parser.add_argument('--limit', type=int, default=10,
+                              help='Number of prompts to process (default: 10)')
+    openai_parser.add_argument('--prompt-column', type=str, default='PROMPT_V1_NOR',
+                              help='Prompt column to use (default: PROMPT_V1_NOR)')
+    openai_parser.add_argument('--delay', type=float, default=1.0,
+                              help='Delay between API calls in seconds (default: 1.0)')
+    
+    # OpenAI statistics command
+    subparsers.add_parser('openai-stats', help='Show OpenAI processing statistics')
+    
     args = parser.parse_args()
     
     # Load configuration
@@ -405,6 +478,14 @@ Examples:
             
         elif args.command == 'clean-text':
             success = clean_pdf_text(config, args.count, args.multiprocess, args.processes, args.aggressive)
+            return 0 if success else 1
+            
+        elif args.command == 'openai':
+            success = process_openai_prompts(config, args.prompt_column, args.limit, args.delay)
+            return 0 if success else 1
+            
+        elif args.command == 'openai-stats':
+            success = show_openai_statistics(config)
             return 0 if success else 1
             
         else:

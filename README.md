@@ -5,8 +5,9 @@ A Python-based system for processing Norwegian energy certificate data from Enov
 ## Features
 
 ✅ **Step 1 - Data Download**: Download CSV files containing energy certificate data by year  
-🔄 **Step 3 - API Processing**: Call Enova API to get detailed certificate information  
-⏳ **Steps 2, 4-7**: CSV import, PDF processing, text extraction, parsing, and AI analysis (coming next)
+✅ **Step 3 - API Processing**: Call Enova API to get detailed certificate information  
+✅ **Step 7 - AI Analysis**: OpenAI integration for energy certificate text analysis  
+⏳ **Steps 2, 4-6**: CSV import, PDF processing, text extraction, and parsing (coming next)
 
 ## Quick Start
 
@@ -52,6 +53,13 @@ python main.py list                             # List downloaded files
 python main.py api --rows 10                    # Process 10 certificates
 python tests/test_api_client.py --rows 5        # Test API with 5 rows
 
+# Process energy certificates with OpenAI
+python main.py openai --limit 20                # Process 20 prompts with OpenAI
+python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
+python main.py openai-stats                     # Show OpenAI processing statistics
+python example_openai_usage.py                  # Alternative: Use example script
+python test_openai_setup.py                     # Test OpenAI configuration
+
 # Configuration
 python main.py config                           # Show current config
 ```
@@ -63,6 +71,7 @@ src/
 ├── services/
 │   ├── file_downloader.py     # Download CSV files from Enova API
 │   ├── api_client.py          # Process certificates through detailed API
+│   ├── openai_service.py      # OpenAI integration for text analysis
 │   └── ...                    # More services coming
 ├── utils/
 │── workflows/
@@ -71,6 +80,8 @@ sql/
 └── sample_data.sql           # Test data
 tests/
 ├── test_api_client.py        # API client testing
+example_openai_usage.py       # OpenAI service usage example
+test_openai_setup.py          # OpenAI configuration test
 ```
 
 ## Configuration (.env)
@@ -85,6 +96,12 @@ DATABASE_TRUSTED_CONNECTION=yes
 ENOVA_API_KEY=your-api-key-here
 ENOVA_API_BASE_URL=https://api.data.enova.no/ems/offentlige-data/v1
 
+# OpenAI API
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_MAX_TOKENS=2000
+OPENAI_TEMPERATURE=0.3
+
 # File Storage
 BASE_DATA_PATH=./data
 ```
@@ -94,6 +111,8 @@ BASE_DATA_PATH=./data
 - `[ev_enova].[Certificate]` - Main certificate data (your source)
 - `[ev_enova].[EnovaApi_Energiattest_url_log]` - API call logging
 - `[ev_enova].[EnovaApi_Energiattest_url]` - Detailed API responses
+- `[ev_enova].[SampleTestDataForOpenAI]` - Energy certificate prompts for AI analysis
+- `[ev_enova].[OpenAIAnswers]` - Structured AI responses (AboutEstate, Positives, Evaluation)
 
 ## API Workflow
 
@@ -125,10 +144,19 @@ BASE_DATA_PATH=./data
 - API processing
 - Configuration display
 
+### ✅ OpenAI Service (`openai_service.py`)
+- Processes energy certificate prompts with OpenAI API
+- Structured response parsing (AboutEstate, Positives, Evaluation)
+- Database integration for storing AI analysis results
+- Rate limiting and error handling
+- Comprehensive logging and statistics
+- Support for multiple prompt versions (PROMPT_V1_NOR, PROMPT_V2_NOR)
+
 ### ✅ Testing Framework
 - Comprehensive API client testing
 - Database connection verification
 - Step-by-step testing workflow
+- OpenAI service testing and examples
 
 ## Coming Next
 
@@ -136,7 +164,6 @@ BASE_DATA_PATH=./data
 - **Step 4**: PDF download and file management  
 - **Step 5**: PDF text extraction using docling
 - **Step 6**: Text cleaning with regex
-- **Step 7**: OpenAI integration for analysis
 - **Web interface**: Optional Flask/FastAPI dashboard
 
 ## Development
@@ -147,6 +174,12 @@ python tests/test_api_client.py --test-connection
 python tests/test_api_client.py --test-procedure --rows 3
 python tests/test_api_client.py --test-api
 python tests/test_api_client.py --full --rows 5
+
+# Test OpenAI service
+python main.py openai --limit 5                 # Test with 5 prompts
+python main.py openai-stats                     # Check processing statistics
+python test_openai_setup.py                     # Test configuration
+python example_openai_usage.py                  # Alternative test script
 
 # Run setup verification
 python setup.py
@@ -163,6 +196,27 @@ Processing 3 certificates through API...
   Records inserted: 8
   Processing time: 2.147 seconds
   Avg time per API call: 0.7157 seconds
+
+$ python main.py openai --limit 10
+Processing 10 prompts with OpenAI using column: PROMPT_V1_NOR...
+✓ OpenAI processing completed successfully
+  Total prompts: 10
+  Successfully processed: 10
+  Errors: 0
+  Processing time: 25.3 seconds
+  Success rate: 100.0%
+
+$ python main.py openai-stats
+OpenAI Processing Statistics:
+==================================================
+Prompt Version: PROMPT_V1_NOR
+  Total responses: 25
+  First processed: 2024-01-15 10:30:00
+  Last processed: 2024-01-15 14:45:00
+  Completion rates:
+    About Estate: 100.0%
+    Positives: 96.0%
+    Evaluation: 92.0%
 ```
 
 ## Requirements
@@ -172,6 +226,15 @@ Processing 3 certificates through API...
 - ODBC Driver 17 for SQL Server
 - Enova API key
 - Windows (for trusted connection) or SQL authentication
+
+## Documentation
+
+- **Main README**: This file - overview and quick start
+- **[OpenAI Service Guide](README_OpenAI_Service.md)**: Detailed documentation for the OpenAI integration
+- **[PDF Scanner Guide](PDF_SCANNER_GUIDE.md)**: PDF processing and scanning
+- **[PDF Processor Guide](PDF_PROCESSOR_GUIDE.md)**: PDF text extraction and processing
+- **[PDF Downloader Guide](PDF_DOWNLOADER_GUIDE.md)**: PDF file downloading
+- **[Text Cleaner Guide](TEXT_CLEANER_GUIDE.md)**: Text cleaning and preprocessing
 
 ## License
 
