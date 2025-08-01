@@ -10,6 +10,7 @@ from src.services.file_downloader import FileDownloader
 from src.services.api_client import EnovaApiClient
 from src.services.openai_service import OpenAIEnergyService
 from src.services.pdf_downloader import PDFDownloader
+from src.services.csv_import_service import CSVImportService
 from config import Config
 
 def download_year_data(config, year, force=False):
@@ -326,6 +327,46 @@ def show_openai_statistics(config, prompt_version=None):
         print(f"✗ Error getting statistics: {str(e)}")
         return False
 
+def import_csv_data(config, year, batch_size=1000):
+    """Import CSV data for a specific year into database"""
+    print(f"Importing CSV data for year {year}...")
+    
+    try:
+        csv_import_service = CSVImportService(config)
+        success = csv_import_service.import_year_data(year, auto_import=True, batch_size=batch_size)
+        
+        if success:
+            print(f"✓ CSV import for {year} completed successfully")
+            return True
+        else:
+            print(f"✗ CSV import for {year} failed")
+            return False
+            
+    except Exception as e:
+        print(f"✗ CSV import error: {str(e)}")
+        return False
+
+def import_csv_range(config, start_year, end_year, batch_size=1000):
+    """Import CSV data for a range of years into database"""
+    print(f"Importing CSV data for years {start_year} to {end_year}...")
+    
+    try:
+        csv_import_service = CSVImportService(config)
+        result = csv_import_service.import_year_range(start_year, end_year, auto_import=True, batch_size=batch_size)
+        
+        if result['total_success']:
+            print(f"✓ All {len(result['successful_years'])} years imported successfully")
+            return True
+        else:
+            print(f"✗ Import completed with some failures:")
+            print(f"  Successful: {result['successful_years']}")
+            print(f"  Failed: {result['failed_years']}")
+            return False
+            
+    except Exception as e:
+        print(f"✗ CSV import error: {str(e)}")
+        return False
+
 def main():
     """Main function with command line argument parsing"""
     parser = argparse.ArgumentParser(
@@ -336,20 +377,22 @@ Examples:
   python main.py download 2025                    # Download 2025 data
   python main.py download 2020 2025               # Download 2020-2025 data
   python main.py download 2025 --force            # Force re-download 2025
+  python main.py import-csv 2025                  # Import 2025 CSV to database
+  python main.py import-csv 2020 2025             # Import 2020-2025 CSV files
   python main.py list                             # List downloaded files
   python main.py config                           # Show configuration
   python main.py api --rows 5                     # Process 5 certificates through API
   python main.py cleanup --hours 1                # Clean up pending records older than 1 hour
   python main.py scan-pdf                         # Scan PDF directory and populate database
-      python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
-    python main.py download-pdf --count 20          # Download 20 PDF files from URLs
-    python main.py process-pdf --count 50           # Extract text from 50 PDF files
-    python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
-    python main.py clean-text --count 100           # Clean 100 extracted text records
-    python main.py clean-text --multiprocess        # Use multiprocessing for faster cleaning
-    python main.py openai --limit 20                # Process 20 prompts with OpenAI
-    python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
-    python main.py openai-stats                     # Show OpenAI processing statistics
+  python main.py scan-pdf --force                 # Force scan all PDFs (including existing)
+  python main.py download-pdf --count 20          # Download 20 PDF files from URLs
+  python main.py process-pdf --count 50           # Extract text from 50 PDF files
+  python main.py process-pdf --multiprocess       # Use multiprocessing for faster extraction
+  python main.py clean-text --count 100           # Clean 100 extracted text records
+  python main.py clean-text --multiprocess        # Use multiprocessing for faster cleaning
+  python main.py openai --limit 20                # Process 20 prompts with OpenAI
+  python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
+  python main.py openai-stats                     # Show OpenAI processing statistics
         """
     )
     
@@ -360,6 +403,12 @@ Examples:
     download_parser.add_argument('year', type=int, help='Year to download (or start year if end_year specified)')
     download_parser.add_argument('end_year', type=int, nargs='?', help='End year for range download')
     download_parser.add_argument('--force', action='store_true', help='Force re-download even if file exists')
+    
+    # CSV Import command
+    import_parser = subparsers.add_parser('import-csv', help='Import CSV data to database')
+    import_parser.add_argument('year', type=int, help='Year to import (or start year if end_year specified)')
+    import_parser.add_argument('end_year', type=int, nargs='?', help='End year for range import')
+    import_parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for processing (default: 1000)')
     
     # List command
     subparsers.add_parser('list', help='List downloaded files')
@@ -442,6 +491,13 @@ Examples:
                 success = download_multiple_years(config, args.year, args.end_year, args.force)
             else:
                 success = download_year_data(config, args.year, args.force)
+            return 0 if success else 1
+            
+        elif args.command == 'import-csv':
+            if args.end_year:
+                success = import_csv_range(config, args.year, args.end_year, args.batch_size)
+            else:
+                success = import_csv_data(config, args.year, args.batch_size)
             return 0 if success else 1
             
         elif args.command == 'list':

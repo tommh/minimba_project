@@ -1,122 +1,42 @@
-# MinimBA Energy Certificate Processing System - Python Dependencies
+# MinimBA Energy Certificate Processing System - Production Dependencies
+# =============================================================================
+# Install with: pip install -r requirements.txt
+# =============================================================================
 
-# =============================================================================
-# Core HTTP and API Dependencies
-# =============================================================================
+# HTTP and API Dependencies
 requests>=2.31.0
 urllib3>=2.0.0
 
-# =============================================================================
 # Database Dependencies (SQL Server)
-# =============================================================================
-# ODBC driver for SQL Server
 pyodbc>=4.0.39
-
-# Alternative SQL Server driver (optional)
-# pymssql>=2.2.8
-
-# SQLAlchemy ORM (for future advanced database operations)
 sqlalchemy>=2.0.0
 
-# =============================================================================
-# Data Processing Dependencies
-# =============================================================================
-# CSV and data manipulation
+# Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
 
-# =============================================================================
 # Configuration and Environment
-# =============================================================================
-# For loading .env files (optional - we have custom loader)
 python-dotenv>=1.0.0
 
-# =============================================================================
-# PDF Processing Dependencies (for Step 5)
-# =============================================================================
-# PDF text extraction using docling
+# PDF Processing (Step 6)
 docling>=1.0.0
 
-# Alternative PDF libraries (optional)
-# PyPDF2>=3.0.0
-# pdfplumber>=0.9.0
-
-# =============================================================================
-# AI/ML Dependencies (for Step 7 - OpenAI integration)
-# =============================================================================
-# OpenAI API client
+# AI/ML Dependencies (Step 8 - OpenAI integration)
 openai>=1.0.0
-
-# LangSmith for tracing and monitoring OpenAI calls
 langsmith>=0.1.0
 
-# =============================================================================
-# Development and Testing Dependencies
-# =============================================================================
-# Testing framework
-pytest>=7.0.0
-pytest-cov>=4.0.0
-
-# Code formatting and linting
-black>=23.0.0
-flake8>=6.0.0
-isort>=5.12.0
-
-# Type checking
-mypy>=1.0.0
-
-# =============================================================================
 # Logging and Monitoring
-# =============================================================================
-# Structured logging
 structlog>=23.0.0
 
-# =============================================================================
-# CLI and User Interface
-# =============================================================================
-# Command line argument parsing (built-in argparse should be sufficient)
-click>=8.0.0
-
-# Rich console output (optional - for prettier CLI)
+# CLI and Output Formatting
 rich>=13.0.0
 
-# =============================================================================
-# Text Processing Dependencies (for Step 6 - text cleaning)
-# =============================================================================
-# Regular expressions (built-in re module should be sufficient)
-# Text processing utilities
-# textblob>=0.17.1  # Uncomment if needed for advanced text processing
-
-# =============================================================================
-# Excel File Support (optional)
-# =============================================================================
-# For reading Excel files if needed
+# Excel File Support
 openpyxl>=3.1.0
-xlrd>=2.0.0
 
 # =============================================================================
-# Development Tools (optional)
+# INSTALLATION GUIDE
 # =============================================================================
-# Jupyter notebooks for data analysis
-# jupyter>=1.0.0
-# ipython>=8.0.0
-
-# API documentation
-# fastapi>=0.100.0  # If building web API later
-# uvicorn>=0.20.0   # ASGI server for FastAPI
-
+# Production only:    pip install -r requirements.txt
+# With development:    pip install -r requirements.txt -r dev-requirements.txt
 # =============================================================================
-# Security and Encryption (if needed)
-# =============================================================================
-# For handling sensitive data
-# cryptography>=41.0.0
-
-# =============================================================================
-# Minimum Requirements for Basic Functionality
-# =============================================================================
-# If you want to install only the essentials, use these:
-# requests>=2.31.0
-# pandas>=2.0.0  
-# pyodbc>=4.0.39
-# openai>=1.0.0
-# python-dotenv>=1.0.0

@@ -5,7 +5,7 @@ An AI-powered energy certificate analysis system that downloads Norwegian buildi
 ## Features
 
 ✅ **Step 1 - Data Download**: Download CSV files containing energy certificate data by year  
-✅ **Step 2 - CSV Import**: Import CSV data to database for processing  
+✅ **Step 2 - CSV Import**: Import CSV data to database for processing with batch support  
 ✅ **Step 3 - API Processing**: Call Enova API to get detailed certificate information  
 ✅ **Step 4 - PDF Download**: Download PDF files from certificate URLs  
 ✅ **Step 5 - PDF Scan**: Scan PDF directory and populate database  
@@ -22,8 +22,11 @@ An AI-powered energy certificate analysis system that downloads Norwegian buildi
 git clone https://github.com/tommh/minimba_project.git
 cd minimba_project
 
-# Install dependencies
+# Install production dependencies
 pip install -r requirements.txt
+
+# For development work, also install dev dependencies
+pip install -r dev-requirements.txt
 
 # Configure environment
 cp .env.example .env
@@ -32,11 +35,19 @@ cp .env.example .env
 
 ### 2. Database Setup
 
-```sql
--- Run in SQL Server Management Studio
--- 1. Create database: EnergyCertificate
--- 2. Run: sql/create_tables.sql
--- 3. Optionally run: sql/sample_data.sql (for testing)
+```bash
+# 1. Create database in SQL Server Management Studio or command line
+# CREATE DATABASE EnergyCertificate;
+
+# 2. Deploy database schema and objects
+cd database
+python scripts/deploy.py
+
+# 3. Optionally load reference data
+python scripts/deploy_selective.py --files data/reference_data.sql
+
+# 4. Validate deployment
+python scripts/validate.py
 ```
 
 ### 3. Verify Setup
@@ -53,25 +64,29 @@ python main.py download 2025                    # Download 2025 data
 python main.py download 2020 2025               # Download range
 python main.py list                             # List downloaded files
 
+# Import CSV data to database
+python main.py import-csv 2025                  # Import 2025 CSV to database
+python main.py import-csv 2020 2025             # Import 2020-2025 CSV files
+
 # Process certificates through API
 python main.py api --rows 10                    # Process 10 certificates
 python tests/test_api_client.py --rows 5        # Test API with 5 rows
 
 # PDF processing
-python main.py scan-pdf                           # Scan PDF directory and populate database
-python main.py download-pdf --count 20           # Download 20 PDF files
-python main.py process-pdf --count 50            # Extract text from 50 PDF files
-python main.py clean-text --count 100            # Clean 100 extracted text records
+python main.py scan-pdf                         # Scan PDF directory and populate database
+python main.py download-pdf --count 20          # Download 20 PDF files
+python main.py process-pdf --count 50           # Extract text from 50 PDF files
+python main.py clean-text --count 100           # Clean 100 extracted text records
 
 # Full pipeline
-python scripts/run_full_pipeline.py 2025         # Run complete pipeline for 2025
+python scripts/run_full_pipeline.py 2025        # Run complete pipeline for 2025
 
 # Process energy certificates with OpenAI
 python main.py openai --limit 20                # Process 20 prompts with OpenAI
 python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
 python main.py openai-stats                     # Show OpenAI processing statistics
-python example_openai_usage.py                  # Alternative: Use example script
-python test_openai_setup.py                     # Test OpenAI configuration
+python examples/openai_usage_example.py         # Alternative: Use example script
+python tests/test_openai_setup.py               # Test OpenAI configuration
 
 # Configuration
 python main.py config                           # Show current config
@@ -83,22 +98,40 @@ python main.py config                           # Show current config
 src/
 ├── services/
 │   ├── file_downloader.py     # Download CSV files from Enova API
-│   ├── csv_processor.py       # Import CSV data to database
-│   ├── api_client.py          # Process certificates through detailed API
-│   ├── pdf_downloader.py      # Download PDF files from certificate URLs
-│   ├── pdf_scanner.py         # Scan PDF directory and populate database
-│   ├── pdf_processor.py       # Extract text from PDF files using Docling
-│   ├── text_cleaner.py        # Clean extracted text using regex patterns
-│   └── openai_service.py      # OpenAI integration for text analysis
+│   ├── csv_import_service.py   # CSV import management and batch processing
+│   ├── csv_processor.py        # Internal CSV processing utilities
+│   ├── api_client.py           # Process certificates through detailed API
+│   ├── pdf_downloader.py       # Download PDF files from certificate URLs
+│   ├── pdf_scanner.py          # Scan PDF directory and populate database
+│   ├── pdf_processor.py        # Extract text from PDF files using Docling
+│   ├── text_cleaner.py         # Clean extracted text using regex patterns
+│   └── openai_service.py       # OpenAI integration for text analysis
 ├── utils/
-│── workflows/
-sql/
-├── create_tables.sql          # Database schema
-└── sample_data.sql           # Test data
+├── workflows/
+database/
+├── schemas/                    # Schema creation scripts
+├── schema/                     # Database objects (tables, views, procedures)
+├── scripts/                    # Deployment and management scripts
+├── migrations/                 # Database migration scripts
+└── data/                       # Reference and seed data
 tests/
-├── test_api_client.py        # API client testing
-example_openai_usage.py       # OpenAI service usage example
-test_openai_setup.py          # OpenAI configuration test
+├── test_api_client.py         # API client testing
+├── test_csv_processor.py      # CSV processing tests
+├── test_openai_setup.py       # OpenAI configuration test
+└── test_langsmith_setup.py    # LangSmith integration test
+examples/
+├── openai_usage_example.py    # OpenAI service usage example
+└── README.md                   # Examples documentation
+tools/
+├── diagnose_pdf_scanner.py    # PDF processing diagnostics
+└── README.md                   # Tools documentation
+scripts/
+└── run_full_pipeline.py       # Complete pipeline orchestration
+reports/
+├── energy_certificate_analysis.pbix  # Power BI dashboard
+├── templates/                  # Report templates
+├── exports/                    # Exported reports
+└── documentation/              # Report guides
 ```
 
 ## Configuration (.env)
@@ -218,16 +251,24 @@ python tests/test_api_client.py --full --rows 5
 
 # Test individual services
 python main.py scan-pdf                         # Test PDF scanning
-python main.py download-pdf --count 5          # Test PDF downloading
-python main.py process-pdf --count 5           # Test PDF text extraction
-python main.py clean-text --count 10           # Test text cleaning
+python main.py download-pdf --count 5           # Test PDF downloading
+python main.py process-pdf --count 5            # Test PDF text extraction
+python main.py clean-text --count 10            # Test text cleaning
+
+# Test CSV import functionality
+python main.py import-csv 2025                  # Test CSV import
+python src/services/csv_import_service.py --year 2025  # Direct service test
 
 # Test OpenAI service
 python main.py openai --limit 5                 # Test with 5 prompts
 python main.py openai-stats                     # Check processing statistics
-python test_openai_setup.py                     # Test configuration
-python test_langsmith_setup.py                  # Test LangSmith integration
-python example_openai_usage.py                  # Alternative test script
+python tests/test_openai_setup.py               # Test configuration
+python tests/test_langsmith_setup.py            # Test LangSmith integration
+python examples/openai_usage_example.py         # Alternative test script
+
+# Test database operations
+python database/scripts/validate.py             # Validate database
+python tools/diagnose_pdf_scanner.py            # Diagnose PDF issues
 
 # Test full pipeline
 python scripts/run_full_pipeline.py 2025 --download-count 5  # Test with small counts
@@ -286,6 +327,34 @@ Prompt Version: PROMPT_V1_NOR
 - **[PDF Processor Guide](PDF_PROCESSOR_GUIDE.md)**: PDF text extraction and processing
 - **[PDF Downloader Guide](PDF_DOWNLOADER_GUIDE.md)**: PDF file downloading
 - **[Text Cleaner Guide](TEXT_CLEANER_GUIDE.md)**: Text cleaning and preprocessing
+- **[Reports Documentation](reports/README.md)**: Power BI reports and analytics
+
+## 📊 Power BI Analytics
+
+The project includes Power BI reports for visualizing OpenAI analysis results:
+
+### Energy Certificate Analysis Dashboard
+- **File**: `reports/energy_certificate_analysis.pbix`
+- **Purpose**: Visualizes AI-generated insights from energy certificates
+- **Data Sources**: `[ev_enova].[OpenAIAnswers]`, `[ev_enova].[ViewOpenAIinPowerBI]`
+- **Key Metrics**: AI completion rates, evaluation trends, processing performance
+
+### Usage:
+```bash
+# Process data for Power BI
+python main.py openai --limit 100
+
+# Open Power BI report
+# Double-click: reports/energy_certificate_analysis.pbix
+
+# Refresh data in Power BI Desktop
+# Click "Refresh" to get latest analysis results
+```
+
+**Prerequisites**:
+- Power BI Desktop installed
+- Database access with read permissions
+- ODBC drivers configured
 
 ## License
 

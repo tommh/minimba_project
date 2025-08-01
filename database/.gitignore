@@ -1,0 +1,42 @@
+# Database files - ignore sensitive and temporary files
+
+# Environment files with connection strings
+.env
+*.env
+
+# Log files
+*.log
+database_deployment.log
+
+# Backup files
+backups/
+*.bak
+*.trn
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development databases
+*.mdf
+*.ldf
+*.sdf
+
+# SQL Server temporary files
+*.tlog

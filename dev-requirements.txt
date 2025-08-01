@@ -1,0 +1,42 @@
+# Development Dependencies for MinimBA Energy Certificate Processing System
+# =============================================================================
+# Install with: pip install -r dev-requirements.txt
+# Note: This assumes you've already installed requirements.txt
+# =============================================================================
+
+# Testing Framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Code Quality and Formatting
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Type Checking
+mypy>=1.0.0
+
+# Development Tools
+jupyter>=1.0.0
+ipython>=8.0.0
+
+# Documentation
+sphinx>=6.0.0
+
+# Alternative libraries for testing/development
+PyPDF2>=3.0.0                # Alternative PDF library
+pdfplumber>=0.9.0             # Alternative PDF library  
+pymssql>=2.2.8                # Alternative SQL Server driver
+
+# Future development tools (optional)
+fastapi>=0.100.0              # If building web API later
+uvicorn>=0.20.0               # ASGI server for FastAPI
+click>=8.0.0                  # Alternative CLI framework
+textblob>=0.17.1              # Advanced text processing
+
+# =============================================================================
+# INSTALLATION GUIDE
+# =============================================================================
+# Full development setup:
+#   pip install -r requirements.txt -r dev-requirements.txt
+# =============================================================================

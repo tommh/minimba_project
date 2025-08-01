@@ -346,6 +346,23 @@ migrations/auto_*
 # Memory dumps
 *.dmp
 
+# Power BI files (handle carefully - see comments below)
+# Include .pbix files in repository but exclude personal/temporary files
+*.pbix.tmp
+*.pbix.backup
+*_backup.pbix
+*_temp.pbix
+# Power BI cache and temp files
+.powerbi/
+powerbi_cache/
+# Power BI exports (generated files)
+reports/exports/*.pdf
+reports/exports/*.xlsx
+reports/exports/*.csv
+# Keep the main .pbix files and templates
+!reports/*.pbix
+!reports/templates/*.pbit
+
 # =============================================================================
 # Archive & Compressed Files
 # =============================================================================

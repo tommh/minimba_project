@@ -23,6 +23,7 @@ from src.services.pdf_scanner import PDFFileScanner
 from src.services.pdf_processor import PDFTextProcessor
 from src.services.text_cleaner import TextCleaningProcessor
 from src.services.openai_service import OpenAIEnergyService
+from src.services.csv_import_service import CSVImportService
 import logging
 
 # Configure logging
@@ -40,6 +41,7 @@ class FullPipeline:
         self.start_time = datetime.now()
         self.results = {
             'download': {},
+            'csv_import': {},
             'api_processing': {},
             'pdf_download': {},
             'pdf_scan': {},
@@ -50,6 +52,7 @@ class FullPipeline:
         
         # Initialize services
         self.file_downloader = FileDownloader(config)
+        self.csv_import_service = CSVImportService(config)
         self.api_client = EnovaApiClient(config)
         self.pdf_downloader = PDFDownloader(config)
         self.pdf_scanner = PDFFileScanner(config)
@@ -87,22 +90,25 @@ class FullPipeline:
             # Step 1: Download CSV data
             self._step_download_csv(year, force_download)
             
-            # Step 2: Process certificates through API
+            # Step 2: Import CSV to database
+            self._step_csv_import(year)
+            
+            # Step 3: Process certificates through API
             self._step_api_processing(download_count)
             
-            # Step 3: Download PDF files
+            # Step 4: Download PDF files
             self._step_pdf_download(download_count)
             
-            # Step 4: Scan PDF directory
+            # Step 5: Scan PDF directory
             self._step_pdf_scan()
             
-            # Step 5: Process PDF files (extract text)
+            # Step 6: Process PDF files (extract text)
             self._step_pdf_processing(pdf_count)
             
-            # Step 6: Clean extracted text
+            # Step 7: Clean extracted text
             self._step_text_cleaning(clean_count)
             
-            # Step 7: OpenAI analysis
+            # Step 8: OpenAI analysis
             self._step_openai_analysis(openai_limit, prompt_column)
             
             # Final summary
@@ -134,10 +140,31 @@ class FullPipeline:
             logger.error(f"❌ CSV download step failed: {str(e)}")
             self.results['download'] = {'success': False, 'error': str(e)}
     
-    def _step_api_processing(self, count: int):
-        """Step 2: Process certificates through API"""
+    def _step_csv_import(self, year: int):
+        """Step 2: Import CSV data to database"""
         logger.info("\n" + "=" * 60)
-        logger.info("🔗 STEP 2: Processing Certificates Through API")
+        logger.info("📊 STEP 2: Importing CSV Data to Database")
+        logger.info("=" * 60)
+        
+        try:
+            # Use the CSV import service instead of direct CSV processor
+            success = self.csv_import_service.import_year_data(year, auto_import=True, batch_size=1000)
+            
+            if success:
+                logger.info(f"✅ CSV import successful")
+                self.results['csv_import'] = {'success': True}
+            else:
+                logger.error(f"❌ CSV import failed")
+                self.results['csv_import'] = {'success': False, 'error': 'Import failed'}
+                
+        except Exception as e:
+            logger.error(f"❌ CSV import step failed: {str(e)}")
+            self.results['csv_import'] = {'success': False, 'error': str(e)}
+    
+    def _step_api_processing(self, count: int):
+        """Step 3: Process certificates through API"""
+        logger.info("\n" + "=" * 60)
+        logger.info("�� STEP 3: Processing Certificates Through API")
         logger.info("=" * 60)
         
         try:
@@ -157,9 +184,9 @@ class FullPipeline:
             self.results['api_processing'] = {'success': False, 'error': str(e)}
     
     def _step_pdf_download(self, count: int):
-        """Step 3: Download PDF files from certificate URLs"""
+        """Step 4: Download PDF files from certificate URLs"""
         logger.info("\n" + "=" * 60)
-        logger.info("📄 STEP 3: Downloading PDF Files")
+        logger.info("📄 STEP 4: Downloading PDF Files")
         logger.info("=" * 60)
         
         try:
@@ -181,9 +208,9 @@ class FullPipeline:
             self.results['pdf_download'] = {'success': False, 'error': str(e)}
     
     def _step_pdf_scan(self):
-        """Step 4: Scan PDF directory and populate database"""
+        """Step 5: Scan PDF directory and populate database"""
         logger.info("\n" + "=" * 60)
-        logger.info("🔍 STEP 4: Scanning PDF Directory")
+        logger.info("🔍 STEP 5: Scanning PDF Directory")
         logger.info("=" * 60)
         
         try:
@@ -204,9 +231,9 @@ class FullPipeline:
             self.results['pdf_scan'] = {'success': False, 'error': str(e)}
     
     def _step_pdf_processing(self, count: int):
-        """Step 5: Process PDF files to extract text"""
+        """Step 6: Process PDF files to extract text"""
         logger.info("\n" + "=" * 60)
-        logger.info("📝 STEP 5: Processing PDF Files (Text Extraction)")
+        logger.info("�� STEP 6: Processing PDF Files (Text Extraction)")
         logger.info("=" * 60)
         
         try:
@@ -226,9 +253,9 @@ class FullPipeline:
             self.results['pdf_processing'] = {'success': False, 'error': str(e)}
     
     def _step_text_cleaning(self, count: int):
-        """Step 6: Clean extracted text using regex patterns"""
+        """Step 7: Clean extracted text using regex patterns"""
         logger.info("\n" + "=" * 60)
-        logger.info("🧹 STEP 6: Cleaning Extracted Text")
+        logger.info("🧹 STEP 7: Cleaning Extracted Text")
         logger.info("=" * 60)
         
         try:
@@ -248,9 +275,9 @@ class FullPipeline:
             self.results['text_cleaning'] = {'success': False, 'error': str(e)}
     
     def _step_openai_analysis(self, limit: int, prompt_column: str):
-        """Step 7: Process energy certificates with OpenAI API"""
+        """Step 8: Process energy certificates with OpenAI API"""
         logger.info("\n" + "=" * 60)
-        logger.info("🤖 STEP 7: OpenAI Analysis")
+        logger.info("🤖 STEP 8: OpenAI Analysis")
         logger.info("=" * 60)
         
         try:
@@ -284,6 +311,7 @@ class FullPipeline:
         # Summary of each step
         steps = [
             ("📥 CSV Download", self.results['download']),
+            ("📊 CSV Import", self.results['csv_import']),
             ("🔗 API Processing", self.results['api_processing']),
             ("📄 PDF Download", self.results['pdf_download']),
             ("🔍 PDF Scan", self.results['pdf_scan']),
