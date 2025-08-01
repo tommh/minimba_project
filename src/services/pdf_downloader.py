@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-PDF Downloader for Enova Energy Certificates
+PDF Download Service for Enova Energy Certificates
 Downloads PDF files from URLs obtained via stored procedure
 """
 
@@ -13,18 +12,8 @@ import requests
 import logging
 from urllib.parse import urlparse
 import time
+from typing import Dict, Any, List, Optional
 
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
-
-from config import Config
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 class PDFDownloader:
@@ -60,31 +49,38 @@ class PDFDownloader:
         
         return session
     
-    def get_database_connection(self):
-        """Get database connection"""
-        if self.config.DATABASE_TRUSTED_CONNECTION:
-            conn_str = (
-                f"DRIVER={{{self.config.DATABASE_DRIVER}}};"
-                f"SERVER={self.config.DATABASE_SERVER};"
-                f"DATABASE={self.config.DATABASE_NAME};"
-                f"Trusted_Connection=yes;"
-            )
-        else:
-            conn_str = (
-                f"DRIVER={{{self.config.DATABASE_DRIVER}}};"
-                f"SERVER={self.config.DATABASE_SERVER};"
-                f"DATABASE={self.config.DATABASE_NAME};"
-                f"UID={self.config.DATABASE_USERNAME};"
-                f"PWD={self.config.DATABASE_PASSWORD};"
-            )
-        
-        return pyodbc.connect(conn_str)
+    def _get_database_connection(self):
+        """Get database connection using configuration"""
+        try:
+            # Build connection string based on configuration
+            if self.config.DATABASE_TRUSTED_CONNECTION:
+                conn_str = (
+                    f"DRIVER={{{self.config.DATABASE_DRIVER}}};"
+                    f"SERVER={self.config.DATABASE_SERVER};"
+                    f"DATABASE={self.config.DATABASE_NAME};"
+                    f"Trusted_Connection=yes;"
+                )
+            else:
+                conn_str = (
+                    f"DRIVER={{{self.config.DATABASE_DRIVER}}};"
+                    f"SERVER={self.config.DATABASE_SERVER};"
+                    f"DATABASE={self.config.DATABASE_NAME};"
+                    f"UID={self.config.DATABASE_USERNAME};"
+                    f"PWD={self.config.DATABASE_PASSWORD};"
+                )
+            
+            logger.debug(f"Connecting to database: {self.config.DATABASE_SERVER}/{self.config.DATABASE_NAME}")
+            return pyodbc.connect(conn_str)
+            
+        except Exception as e:
+            logger.error(f"Database connection failed: {str(e)}")
+            raise
     
-    def get_urls_to_download(self, top_rows=10):
+    def get_urls_to_download(self, top_rows: int = 10) -> List[Dict[str, str]]:
         """Get PDF URLs to download from stored procedure"""
         conn = None
         try:
-            conn = self.get_database_connection()
+            conn = self._get_database_connection()
             cursor = conn.cursor()
             
             cursor.execute("{CALL ev_enova.Get_Enova_BLOB_url (?)}", top_rows)
@@ -107,11 +103,12 @@ class PDFDownloader:
             if conn:
                 conn.close()
     
-    def log_download_attempt(self, url, filename, status, status_message, file_size=None, http_status_code=None):
+    def log_download_attempt(self, url: str, filename: str, status: str, status_message: str, 
+                           file_size: Optional[int] = None, http_status_code: Optional[int] = None):
         """Log download attempt to database"""
         conn = None
         try:
-            conn = self.get_database_connection()
+            conn = self._get_database_connection()
             cursor = conn.cursor()
             
             cursor.execute("""
@@ -138,7 +135,7 @@ class PDFDownloader:
             if conn:
                 conn.close()
     
-    def extract_filename_from_url(self, url):
+    def extract_filename_from_url(self, url: str) -> str:
         """Extract filename from URL, handling various URL formats"""
         try:
             # Parse URL
@@ -194,7 +191,7 @@ class PDFDownloader:
             url_hash = str(hash(url))[-8:]
             return f"energiattest_{url_hash}.pdf"
     
-    def download_pdf(self, url, expected_filename=None):
+    def download_pdf(self, url: str, expected_filename: Optional[str] = None) -> bool:
         """Download a single PDF file"""
         filename = expected_filename or self.extract_filename_from_url(url)
         file_path = self.pdf_directory / filename
@@ -295,12 +292,18 @@ class PDFDownloader:
                 
             return False
     
-    def download_batch(self, top_rows=10, delay_between_downloads=1.0):
+    def download_pdfs(self, count: int = 10, delay: float = 1.0) -> Dict[str, Any]:
         """Download a batch of PDF files"""
-        logger.info(f"Starting PDF download batch (max {top_rows} files)")
+        logger.info(f"Starting PDF download batch (max {count} files)")
+        
+        # Reset counters
+        self.downloads_attempted = 0
+        self.downloads_successful = 0
+        self.downloads_failed = 0
+        self.downloads_skipped = 0
         
         # Get URLs to download
-        urls_to_download = self.get_urls_to_download(top_rows)
+        urls_to_download = self.get_urls_to_download(count)
         
         if not urls_to_download:
             logger.info("No URLs found to download")
@@ -324,8 +327,8 @@ class PDFDownloader:
             success = self.download_pdf(url, expected_filename)
             
             # Add delay between downloads to be respectful
-            if delay_between_downloads > 0 and i < len(urls_to_download) - 1:
-                time.sleep(delay_between_downloads)
+            if delay > 0 and i < len(urls_to_download) - 1:
+                time.sleep(delay)
             
             # Progress reporting
             if (i + 1) % 10 == 0:
@@ -347,82 +350,4 @@ class PDFDownloader:
             'successful': self.downloads_successful,
             'failed': self.downloads_failed,
             'skipped': self.downloads_skipped
-        }
-
-def main():
-    """Main function with command line options"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(
-        description='Download PDF files from Enova certificate URLs',
-        epilog="""
-Examples:
-  python pdf_downloader.py                     # Download 10 PDFs (default)
-  python pdf_downloader.py --count 50          # Download up to 50 PDFs
-  python pdf_downloader.py --delay 2.0         # 2 second delay between downloads
-  python pdf_downloader.py --verbose           # Verbose logging
-        """,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    
-    parser.add_argument('--count', type=int, default=10,
-                       help='Number of PDFs to download (default: 10)')
-    parser.add_argument('--delay', type=float, default=1.0,
-                       help='Delay between downloads in seconds (default: 1.0)')
-    parser.add_argument('--verbose', action='store_true',
-                       help='Enable verbose logging')
-    
-    args = parser.parse_args()
-    
-    # Set logging level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    # Load configuration
-    try:
-        config = Config()
-        if not config.validate_config():
-            print("❌ Configuration validation failed. Please check your .env file.")
-            return 1
-    except Exception as e:
-        print(f"❌ Configuration error: {str(e)}")
-        return 1
-    
-    # Create downloader
-    downloader = PDFDownloader(config)
-    
-    # Run download batch
-    try:
-        result = downloader.download_batch(
-            top_rows=args.count,
-            delay_between_downloads=args.delay
-        )
-        
-        if result['success']:
-            print(f"\n✅ Download batch completed!")
-            print(f"   URLs processed: {result['attempted']:,}")
-            print(f"   Downloads successful: {result['successful']:,}")
-            print(f"   Downloads failed: {result['failed']:,}")
-            print(f"   Downloads skipped: {result['skipped']:,}")
-            
-            # Calculate success rate
-            total_attempts = result['successful'] + result['failed']
-            if total_attempts > 0:
-                success_rate = (result['successful'] / total_attempts) * 100
-                print(f"   Success rate: {success_rate:.1f}%")
-            
-            return 0
-        else:
-            print(f"\n❌ Download batch failed: {result.get('message', 'Unknown error')}")
-            return 1
-            
-    except KeyboardInterrupt:
-        print("\n⏹️  Download interrupted by user")
-        return 1
-    except Exception as e:
-        print(f"\n❌ Download failed with error: {str(e)}")
-        logger.exception("Detailed error information:")
-        return 1
-
-if __name__ == "__main__":
-    sys.exit(main())
+        } 

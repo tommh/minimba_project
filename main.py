@@ -9,6 +9,7 @@ from pathlib import Path
 from src.services.file_downloader import FileDownloader
 from src.services.api_client import EnovaApiClient
 from src.services.openai_service import OpenAIEnergyService
+from src.services.pdf_downloader import PDFDownloader
 from config import Config
 
 def download_year_data(config, year, force=False):
@@ -127,10 +128,8 @@ def download_pdfs(config, count=10, delay=1.0):
     print(f"Downloading up to {count} PDF files...")
     
     try:
-        from pdf_downloader import PDFDownloader
-        
         downloader = PDFDownloader(config)
-        result = downloader.download_batch(top_rows=count, delay_between_downloads=delay)
+        result = downloader.download_pdfs(count=count, delay=delay)
         
         if result['success']:
             print(f"✓ PDF download completed successfully")
@@ -150,9 +149,6 @@ def download_pdfs(config, count=10, delay=1.0):
             print(f"✗ PDF download failed: {result.get('message', 'Unknown error')}")
             return False
             
-    except ImportError:
-        print(f"✗ PDF downloader module not found")
-        return False
     except Exception as e:
         print(f"✗ PDF download error: {str(e)}")
         return False

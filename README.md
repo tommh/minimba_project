@@ -1,6 +1,6 @@
 # MinimBA Energy Certificate Processing System
 
-A Python-based system for processing Norwegian energy certificate data from Enova's API.
+An AI-powered energy certificate analysis system that downloads Norwegian building data, uses OpenAI to generate structured property insights, and provides comprehensive monitoring through LangSmith tracing.
 
 ## Features
 
@@ -72,6 +72,7 @@ src/
 │   ├── file_downloader.py     # Download CSV files from Enova API
 │   ├── api_client.py          # Process certificates through detailed API
 │   ├── openai_service.py      # OpenAI integration for text analysis
+│   ├── pdf_downloader.py      # Download PDF files from certificate URLs
 │   └── ...                    # More services coming
 ├── utils/
 │── workflows/

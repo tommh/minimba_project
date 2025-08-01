@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 class FileDownloader:
-    """Service for downloading files from Enova API"""
+    """Service for downloading Certificate data files from Enova API"""
     
     def __init__(self, config):
         self.config = config
