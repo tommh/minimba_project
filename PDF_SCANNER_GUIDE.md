@@ -15,34 +15,34 @@ Scan your `data/downloads/pdfs` directory and populate the `[ev_enova].[Energyla
 
 ## 🚀 **Usage Options**
 
-### **1. Standalone Python Script** (Recommended)
+### **1. Main CLI Command** (Recommended)
 ```bash
 # Basic scan (skip existing files)
-python scan_pdf_files.py
-
-# Force scan all files (including existing)
-python scan_pdf_files.py --force
-
-# Custom batch size
-python scan_pdf_files.py --batch-size 50
-
-# Show directory statistics only
-python scan_pdf_files.py --stats
-
-# Verbose logging
-python scan_pdf_files.py --verbose
-```
-
-### **2. Integrated CLI Command**
-```bash
-# Basic scan via main CLI
 python main.py scan-pdf
 
-# Force scan all files
+# Force scan all files (including existing)
 python main.py scan-pdf --force
 
 # Custom batch size
 python main.py scan-pdf --batch-size 200
+
+# Show help
+python main.py scan-pdf --help
+```
+
+### **2. Programmatic Usage**
+```python
+from src.services.pdf_scanner import PDFFileScanner
+from config import get_config
+
+config = get_config()
+scanner = PDFFileScanner(config)
+
+# Scan with default settings
+result = scanner.scan_pdf_directory()
+
+# Force scan all files
+result = scanner.scan_pdf_directory(force=True, batch_size=50)
 ```
 
 ### **3. SQL/PowerShell Alternative**
@@ -54,7 +54,7 @@ python main.py scan-pdf --batch-size 200
 ## 📊 **Example Output**
 
 ```bash
-$ python scan_pdf_files.py
+$ python main.py scan-pdf
 
 📁 Scanning directory: C:\Users\tomm\minimba_project\minimba_project\data\downloads\pdfs
 Found 1247 files already in database
@@ -110,23 +110,16 @@ CREATE TABLE [ev_enova].[EnergylabelIDFiles](
 
 ### **Directory Statistics**:
 ```bash
-python scan_pdf_files.py --stats
+# The scanner automatically shows statistics during execution
+python main.py scan-pdf
 
-📁 PDF Directory: C:\...\data\downloads\pdfs
-============================================================
-File counts by extension:
-  .pdf: 2,834 files
-  .tmp: 3 files
-
-Total files: 2,837
-Total size: 45,234,567,890 bytes (42.1 GB)
-
-📄 PDF files: 2,834
-
-Sample PDF files:
-  energiattest_2025_001.pdf (2.3 MB)
-  energiattest_2025_002.pdf (1.8 MB)
-  ... and more
+# For detailed logging, you can also use the programmatic approach
+from src.services.pdf_scanner import PDFFileScanner
+scanner = PDFFileScanner(config)
+stats = scanner.get_directory_statistics()
+print(f"Total PDF files: {stats['total_files']}")
+print(f"Files in database: {stats['files_in_db']}")
+print(f"Files to process: {stats['files_to_process']}")
 ```
 
 ### **Batch Processing**:
@@ -138,6 +131,22 @@ Sample PDF files:
 - Handles corrupted/inaccessible files gracefully
 - Continues processing even if individual files fail
 - Detailed error logging
+
+## 🏗️ **Service Architecture**
+
+The PDF scanner is now integrated as a service in the main CLI:
+
+```
+src/services/pdf_scanner.py  ← PDF scanner service
+main.py                      ← Main CLI with scan-pdf command
+config.py                    ← Configuration management
+```
+
+**Integration Benefits:**
+- ✅ Consistent with other services (file_downloader, api_client, etc.)
+- ✅ Uses shared configuration and logging
+- ✅ Available through main CLI: `python main.py scan-pdf`
+- ✅ Programmatic access for custom workflows
 
 ## ⚙️ **Configuration**
 
@@ -204,7 +213,7 @@ HAVING COUNT(*) > 1;
 4. **Memory issues with large directories**
    ```bash
    # Use smaller batch size
-   python scan_pdf_files.py --batch-size 50
+   python main.py scan-pdf --batch-size 50
    ```
 
 ## 📋 **Integration with Workflow**
