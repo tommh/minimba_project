@@ -5,9 +5,13 @@ An AI-powered energy certificate analysis system that downloads Norwegian buildi
 ## Features
 
 ✅ **Step 1 - Data Download**: Download CSV files containing energy certificate data by year  
+✅ **Step 2 - CSV Import**: Import CSV data to database for processing  
 ✅ **Step 3 - API Processing**: Call Enova API to get detailed certificate information  
-✅ **Step 7 - AI Analysis**: OpenAI integration for energy certificate text analysis  
-⏳ **Steps 2, 4-6**: CSV import, PDF processing, text extraction, and parsing (coming next)
+✅ **Step 4 - PDF Download**: Download PDF files from certificate URLs  
+✅ **Step 5 - PDF Scan**: Scan PDF directory and populate database  
+✅ **Step 6 - PDF Processing**: Extract text from PDF files using Docling  
+✅ **Step 7 - Text Cleaning**: Clean extracted text using regex patterns  
+✅ **Step 8 - AI Analysis**: OpenAI integration for energy certificate text analysis
 
 ## Quick Start
 
@@ -53,6 +57,15 @@ python main.py list                             # List downloaded files
 python main.py api --rows 10                    # Process 10 certificates
 python tests/test_api_client.py --rows 5        # Test API with 5 rows
 
+# PDF processing
+python main.py scan-pdf                           # Scan PDF directory and populate database
+python main.py download-pdf --count 20           # Download 20 PDF files
+python main.py process-pdf --count 50            # Extract text from 50 PDF files
+python main.py clean-text --count 100            # Clean 100 extracted text records
+
+# Full pipeline
+python scripts/run_full_pipeline.py 2025         # Run complete pipeline for 2025
+
 # Process energy certificates with OpenAI
 python main.py openai --limit 20                # Process 20 prompts with OpenAI
 python main.py openai --prompt-column PROMPT_V2_NOR --limit 10  # Use different prompt column
@@ -70,10 +83,13 @@ python main.py config                           # Show current config
 src/
 ├── services/
 │   ├── file_downloader.py     # Download CSV files from Enova API
+│   ├── csv_processor.py       # Import CSV data to database
 │   ├── api_client.py          # Process certificates through detailed API
-│   ├── openai_service.py      # OpenAI integration for text analysis
 │   ├── pdf_downloader.py      # Download PDF files from certificate URLs
-│   └── ...                    # More services coming
+│   ├── pdf_scanner.py         # Scan PDF directory and populate database
+│   ├── pdf_processor.py       # Extract text from PDF files using Docling
+│   ├── text_cleaner.py        # Clean extracted text using regex patterns
+│   └── openai_service.py      # OpenAI integration for text analysis
 ├── utils/
 │── workflows/
 sql/
@@ -166,13 +182,30 @@ BASE_DATA_PATH=./data
 - Step-by-step testing workflow
 - OpenAI service testing and examples
 
-## Coming Next
+## ✅ All Steps Implemented
 
-- **Step 2**: CSV import to database
-- **Step 4**: PDF download and file management  
-- **Step 5**: PDF text extraction using docling
-- **Step 6**: Text cleaning with regex
-- **Web interface**: Optional Flask/FastAPI dashboard
+🎉 **Complete Pipeline Available**: All 8 steps are now implemented and working!
+
+- ✅ **Step 1**: Data Download - Download CSV files by year
+- ✅ **Step 2**: CSV Import - Import CSV data to database
+- ✅ **Step 3**: API Processing - Call Enova API for detailed information
+- ✅ **Step 4**: PDF Download - Download PDF files from URLs
+- ✅ **Step 5**: PDF Scan - Scan PDF directory and populate database
+- ✅ **Step 6**: PDF Processing - Extract text from PDF files
+- ✅ **Step 7**: Text Cleaning - Clean extracted text with regex
+- ✅ **Step 8**: AI Analysis - OpenAI integration for analysis
+
+### 🚀 Full Pipeline Usage
+`ash
+# Run complete pipeline for 2025
+python scripts/run_full_pipeline.py 2025
+
+# Customize pipeline parameters
+python scripts/run_full_pipeline.py 2025 --download-count 50 --pdf-count 100
+
+# Force re-download and custom OpenAI analysis
+python scripts/run_full_pipeline.py 2025 --force --openai-limit 50
+`
 
 ## Development
 
@@ -183,12 +216,21 @@ python tests/test_api_client.py --test-procedure --rows 3
 python tests/test_api_client.py --test-api
 python tests/test_api_client.py --full --rows 5
 
+# Test individual services
+python main.py scan-pdf                         # Test PDF scanning
+python main.py download-pdf --count 5          # Test PDF downloading
+python main.py process-pdf --count 5           # Test PDF text extraction
+python main.py clean-text --count 10           # Test text cleaning
+
 # Test OpenAI service
 python main.py openai --limit 5                 # Test with 5 prompts
 python main.py openai-stats                     # Check processing statistics
 python test_openai_setup.py                     # Test configuration
 python test_langsmith_setup.py                  # Test LangSmith integration
 python example_openai_usage.py                  # Alternative test script
+
+# Test full pipeline
+python scripts/run_full_pipeline.py 2025 --download-count 5  # Test with small counts
 
 # Run setup verification
 python setup.py
