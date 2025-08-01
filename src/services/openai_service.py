@@ -106,11 +106,13 @@ class OpenAIEnergyService:
                 'file_id': file_id,
                 'prompt_version': prompt_version,
                 'project': self.config.LANGSMITH_PROJECT,
-                'tags': ['energy-certificate', 'openai', 'minimba'],
+                'tags': ['energy-certificate', 'openai', 'minimba', f'prompt-version:{prompt_version}'],
                 'metadata': {
                     'model': self.config.OPENAI_MODEL,
                     'max_tokens': self.config.OPENAI_MAX_TOKENS,
-                    'temperature': self.config.OPENAI_TEMPERATURE
+                    'temperature': self.config.OPENAI_TEMPERATURE,
+                    'file_id': file_id,
+                    'prompt_version': prompt_version
                 }
             }
             return trace_metadata
@@ -209,6 +211,7 @@ class OpenAIEnergyService:
                 
                 # Use LangSmith tracing with traceable decorator
                 @traceable(
+                    name=f"openai-energy-certificate-{prompt_version}",
                     project_name=self.config.LANGSMITH_PROJECT,
                     tags=trace_metadata['tags'],
                     metadata=trace_metadata['metadata']
