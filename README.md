@@ -2,6 +2,11 @@
 
 An AI-powered energy certificate analysis system that downloads Norwegian building data, uses OpenAI to generate structured property insights, and provides comprehensive monitoring through LangSmith tracing.
 
+## Demo Video
+
+[![Watch the video](https://img.shields.io/badge/Watch%20Video-Vimeo-blue)](https://vimeo.com/1107415633)
+
+
 ## Features
 
 ✅ **Step 1 - Data Download**: Download CSV files containing energy certificate data by year  
