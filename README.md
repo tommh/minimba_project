@@ -1,4 +1,4 @@
-# MinimBA Energy Certificate Processing System
+# Mini MBA - Energy Certificate Processing System
 
 An AI-powered energy certificate analysis system that downloads Norwegian building data, uses OpenAI to generate structured property insights, and provides comprehensive monitoring through LangSmith tracing.
 
