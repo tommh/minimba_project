@@ -27,8 +27,12 @@ class EnovaApiClient:
         self.log_count = 0
         
         # Rate limiting configuration
-        self.requests_per_second = 2  # Adjust based on API limits
-        self.delay_between_requests = 1.0 / self.requests_per_second
+        # Use configurable delay from environment/.env via Config
+        self.delay_between_requests = self.config.ENOVA_API_DELAY
+        # Derive requests_per_second for reference/metrics
+        self.requests_per_second = (
+            1.0 / self.delay_between_requests if self.delay_between_requests > 0 else float('inf')
+        )
     
     def _setup_session(self):
         """Setup requests session with retry strategy and headers"""
